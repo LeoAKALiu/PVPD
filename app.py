@@ -207,7 +207,7 @@ def main() -> None:
         
         # 显示原图
         st.header("📷 原始图像")
-        st.image(uploaded_file, use_container_width=True)
+        st.image(uploaded_file)
         
         # 推理按钮
         col1, col2, col3 = st.columns([1, 1, 2])
@@ -332,7 +332,7 @@ def main() -> None:
                 pil_image = image_to_pil(vis_image)
                 
                 # 显示可视化结果
-                st.image(pil_image, use_container_width=True, caption="推理结果可视化")
+                st.image(pil_image, use_column_width=True, caption="推理结果可视化")
                 
                 # 下载按钮
                 from io import BytesIO
@@ -436,7 +436,7 @@ def main() -> None:
                 st.subheader("🖼️ 校正后可视化")
                 st.image(
                     corrected_pil_image,
-                    use_container_width=True,
+                    use_column_width=True,
                     caption="几何校正后的检测结果",
                 )
                 

@@ -9,10 +9,24 @@ CONTAINER_NAME: str = os.getenv("PV_PILE_CONTAINER_NAME", "pv_pile_detection")
 DOCKER_IMAGE: str = os.getenv("PV_PILE_DOCKER_IMAGE", "pv_pile:latest")
 
 # ==================== 模型配置 ====================
-MODEL_WEIGHTS: str = os.getenv(
-    "PV_PILE_MODEL_WEIGHTS",
-    "/app/runs/detect/train4/weights/best.pt"
-)
+# 模型文件路径配置
+# 如果当前目录有 best.pt，使用它（需要确保 Docker 容器能访问）
+# 否则使用容器内的默认路径
+_local_model = Path(__file__).parent / "best.pt"
+if _local_model.exists():
+    # 如果本地有模型文件，假设它会被挂载到容器的 /app/models/best.pt
+    # 或者使用环境变量指定的路径
+    MODEL_WEIGHTS: str = os.getenv(
+        "PV_PILE_MODEL_WEIGHTS",
+        "/app/models/best.pt"  # Docker 容器内的路径
+    )
+    LOCAL_MODEL_PATH: Path = _local_model  # 本地路径，用于挂载
+else:
+    MODEL_WEIGHTS: str = os.getenv(
+        "PV_PILE_MODEL_WEIGHTS",
+        "/app/runs/detect/train4/weights/best.pt"
+    )
+    LOCAL_MODEL_PATH: Optional[Path] = None
 
 # ==================== 推理参数 ====================
 DEFAULT_SLICE_HEIGHT: int = int(os.getenv("PV_PILE_SLICE_HEIGHT", "640"))
@@ -71,8 +85,12 @@ def get_docker_input_path(local_path: Path) -> str:
     Returns:
         Docker 容器内的路径
     """
-    relative_path = local_path.relative_to(INPUT_DIR)
-    return str(Path(DOCKER_INPUT_DIR) / relative_path)
+    try:
+        relative_path = local_path.relative_to(INPUT_DIR)
+        return str(Path(DOCKER_INPUT_DIR) / relative_path)
+    except ValueError:
+        # 如果路径不在 INPUT_DIR 下，使用文件名
+        return str(Path(DOCKER_INPUT_DIR) / local_path.name)
 
 
 def get_docker_output_path(local_path: Path) -> str:

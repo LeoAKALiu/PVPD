@@ -73,13 +73,26 @@ export PV_PILE_CONTAINER_NAME="pv_pile_detection"
 export PV_PILE_MODEL_WEIGHTS="/app/runs/detect/train4/weights/best.pt"
 ```
 
-#### 6. 运行应用
+#### 6. 配置模型文件（如果模型文件在当前目录）
 
+如果模型文件 `best.pt` 在当前项目目录下，配置会自动检测并使用它。
+确保 Docker 容器在启动时挂载了模型文件（见 [MODEL_SETUP.md](MODEL_SETUP.md)）。
+
+#### 7. 运行应用
+
+**方式 1: 使用启动脚本（推荐）**
 ```bash
-streamlit run app.py
+./run.sh
+```
+
+**方式 2: 使用 Python 模块**
+```bash
+python3 -m streamlit run app.py
 ```
 
 应用将在浏览器中打开（默认: http://localhost:8501）
+
+**注意**: 如果遇到 `streamlit: bad interpreter` 错误，请使用 `python3 -m streamlit` 方式运行。
 
 ## 📁 项目结构
 

@@ -127,9 +127,6 @@ def fill_grid(
     Returns:
         填充后的点坐标数组
     """
-    if len(points) == 0:
-        return points
-    
     height, width = image_shape
     
     # 创建网格
@@ -149,28 +146,29 @@ def fill_grid(
     )
     grid_points = grid_points[valid_mask]
     
+    # 如果没有现有点，直接返回网格点
+    if len(points) == 0:
+        return grid_points
+    
     # 计算每个网格点到最近现有点的距离
     from scipy.spatial.distance import cdist
     
-    if len(points) > 0:
-        distances = cdist(grid_points, points)
-        min_distances = np.min(distances, axis=1)
-        
-        # 只保留距离现有点足够远的网格点（避免重复）
-        # 同时保留距离较近的点（可能缺失的检测）
-        threshold = grid_spacing * 0.7
-        new_points_mask = min_distances > threshold
-        
-        # 添加新点
-        new_points = grid_points[new_points_mask]
-        
-        if len(new_points) > 0:
-            # 合并现有点和新点
-            all_points = np.vstack([points, new_points])
-        else:
-            all_points = points
+    distances = cdist(grid_points, points)
+    min_distances = np.min(distances, axis=1)
+    
+    # 只保留距离现有点足够远的网格点（避免重复）
+    # 同时保留距离较近的点（可能缺失的检测）
+    threshold = grid_spacing * 0.7
+    new_points_mask = min_distances > threshold
+    
+    # 添加新点
+    new_points = grid_points[new_points_mask]
+    
+    if len(new_points) > 0:
+        # 合并现有点和新点
+        all_points = np.vstack([points, new_points])
     else:
-        all_points = grid_points
+        all_points = points
     
     return all_points
 
