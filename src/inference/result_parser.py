@@ -41,16 +41,24 @@ def parse_sahi_results(json_path: Path | str) -> list[Detection]:
     except Exception as e:
         raise ValueError(f"读取 JSON 文件失败: {e}") from e
     
-    # 验证 JSON 结构
-    if not isinstance(data, dict):
-        raise ValueError("JSON 根对象必须是字典")
-    
-    if "annotations" not in data:
-        raise KeyError("JSON 缺少 'annotations' 字段")
-    
-    annotations = data["annotations"]
-    if not isinstance(annotations, list):
-        raise ValueError("'annotations' 必须是列表")
+    # 验证 JSON 结构并处理不同格式
+    # 支持两种格式：
+    # 1. COCO 格式: {"annotations": [...]}
+    # 2. 列表格式: [...]
+    if isinstance(data, list):
+        # 如果根对象是列表，直接使用
+        annotations = data
+        logger.debug("检测到列表格式 JSON")
+    elif isinstance(data, dict):
+        # 如果是字典，尝试提取 annotations
+        if "annotations" not in data:
+            raise KeyError("JSON 缺少 'annotations' 字段")
+        annotations = data["annotations"]
+        if not isinstance(annotations, list):
+            raise ValueError("'annotations' 必须是列表")
+        logger.debug("检测到 COCO 格式 JSON")
+    else:
+        raise ValueError(f"不支持的 JSON 格式: 根对象类型为 {type(data)}")
     
     # 解析检测结果
     detections: list[Detection] = []

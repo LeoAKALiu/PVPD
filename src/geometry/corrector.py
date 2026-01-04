@@ -119,6 +119,8 @@ def fill_grid(
     """
     使用网格填充算法生成缺失的检测点.
     
+    只在检测到的点附近填充缺失的点，而不是在整个图像上生成网格。
+    
     Args:
         points: 现有点坐标数组，形状为 (n_points, 2)
         image_shape: 图像尺寸 (height, width)
@@ -129,26 +131,30 @@ def fill_grid(
     """
     height, width = image_shape
     
-    # 创建网格
-    x_grid = np.arange(0, width, grid_spacing)
-    y_grid = np.arange(0, height, grid_spacing)
+    # 如果没有现有点，返回空数组（不应该填充整个图像）
+    if len(points) == 0:
+        logger.warning("没有现有点，跳过网格填充")
+        return points
+    
+    # 计算现有点的边界框（带扩展）
+    # 扩展范围：在边界框周围扩展 2 倍 grid_spacing
+    margin = grid_spacing * 2
+    x_min = max(0, float(np.min(points[:, 0])) - margin)
+    x_max = min(width, float(np.max(points[:, 0])) + margin)
+    y_min = max(0, float(np.min(points[:, 1])) - margin)
+    y_max = min(height, float(np.max(points[:, 1])) + margin)
+    
+    # 只在边界框内创建网格
+    x_grid = np.arange(x_min, x_max, grid_spacing)
+    y_grid = np.arange(y_min, y_max, grid_spacing)
+    
+    if len(x_grid) == 0 or len(y_grid) == 0:
+        logger.warning("边界框太小，无法生成网格")
+        return points
     
     # 生成网格点
     xx, yy = np.meshgrid(x_grid, y_grid)
     grid_points = np.column_stack([xx.ravel(), yy.ravel()])
-    
-    # 过滤掉超出图像边界的点
-    valid_mask = (
-        (grid_points[:, 0] >= 0)
-        & (grid_points[:, 0] < width)
-        & (grid_points[:, 1] >= 0)
-        & (grid_points[:, 1] < height)
-    )
-    grid_points = grid_points[valid_mask]
-    
-    # 如果没有现有点，直接返回网格点
-    if len(points) == 0:
-        return grid_points
     
     # 计算每个网格点到最近现有点的距离
     from scipy.spatial.distance import cdist
@@ -156,10 +162,12 @@ def fill_grid(
     distances = cdist(grid_points, points)
     min_distances = np.min(distances, axis=1)
     
-    # 只保留距离现有点足够远的网格点（避免重复）
-    # 同时保留距离较近的点（可能缺失的检测）
-    threshold = grid_spacing * 0.7
-    new_points_mask = min_distances > threshold
+    # 只保留距离现有点足够近的点（在 grid_spacing 范围内，可能是缺失的检测）
+    # 同时排除距离太近的点（避免重复）
+    min_threshold = grid_spacing * 0.3  # 最小距离，避免重复
+    max_threshold = grid_spacing * 1.2  # 最大距离，只在附近填充
+    
+    new_points_mask = (min_distances >= min_threshold) & (min_distances <= max_threshold)
     
     # 添加新点
     new_points = grid_points[new_points_mask]
@@ -167,6 +175,7 @@ def fill_grid(
     if len(new_points) > 0:
         # 合并现有点和新点
         all_points = np.vstack([points, new_points])
+        logger.debug(f"网格填充: 原始 {len(points)} 个点，新增 {len(new_points)} 个点")
     else:
         all_points = points
     

@@ -95,7 +95,6 @@ class TestDrawDetectionOnImage:
     def test_draw_detection(self, sample_image: Path, sample_detection: Detection) -> None:
         """测试绘制检测框."""
         image = load_image(sample_image)
-        original_sum = image.sum()
         result = draw_detection_on_image(image, sample_detection)
         
         assert isinstance(result, np.ndarray)

@@ -10,23 +10,16 @@ DOCKER_IMAGE: str = os.getenv("PV_PILE_DOCKER_IMAGE", "pv_pile:latest")
 
 # ==================== 模型配置 ====================
 # 模型文件路径配置
-# 如果当前目录有 best.pt，使用它（需要确保 Docker 容器能访问）
-# 否则使用容器内的默认路径
+# 优先使用环境变量，其次使用默认路径
+# 默认路径：/app/runs/detect/train4/weights/best.pt（容器内已挂载的路径）
+MODEL_WEIGHTS: str = os.getenv(
+    "PV_PILE_MODEL_WEIGHTS",
+    "/app/runs/detect/train4/weights/best.pt"
+)
+
+# 本地模型文件路径（如果存在，可用于复制到容器）
 _local_model = Path(__file__).parent / "best.pt"
-if _local_model.exists():
-    # 如果本地有模型文件，假设它会被挂载到容器的 /app/models/best.pt
-    # 或者使用环境变量指定的路径
-    MODEL_WEIGHTS: str = os.getenv(
-        "PV_PILE_MODEL_WEIGHTS",
-        "/app/models/best.pt"  # Docker 容器内的路径
-    )
-    LOCAL_MODEL_PATH: Path = _local_model  # 本地路径，用于挂载
-else:
-    MODEL_WEIGHTS: str = os.getenv(
-        "PV_PILE_MODEL_WEIGHTS",
-        "/app/runs/detect/train4/weights/best.pt"
-    )
-    LOCAL_MODEL_PATH: Optional[Path] = None
+LOCAL_MODEL_PATH: Optional[Path] = _local_model if _local_model.exists() else None
 
 # ==================== 推理参数 ====================
 DEFAULT_SLICE_HEIGHT: int = int(os.getenv("PV_PILE_SLICE_HEIGHT", "640"))
@@ -93,6 +86,39 @@ def get_docker_input_path(local_path: Path) -> str:
         return str(Path(DOCKER_INPUT_DIR) / local_path.name)
 
 
+def get_mounted_input_dir() -> Optional[Path]:
+    """
+    获取容器挂载的输入目录路径（宿主机路径）.
+    
+    Returns:
+        挂载的输入目录路径，如果无法确定则返回 None
+    """
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["docker", "inspect", CONTAINER_NAME, "--format", "{{range .Mounts}}{{if eq .Destination \"/app/input\"}}{{.Source}}{{end}}{{end}}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return Path(result.stdout.strip())
+    except Exception:
+        pass
+    
+    # 默认尝试常见的挂载路径
+    default_paths = [
+        Path("/Users/leo/code/SAHI_inf/pv_pile/input"),
+        Path("/Users/leo/code/pv_pile/input"),
+    ]
+    
+    for path in default_paths:
+        if path.exists():
+            return path
+    
+    return None
+
+
 def get_docker_output_path(local_path: Path) -> str:
     """
     将本地路径转换为 Docker 容器内的输出路径.
@@ -105,4 +131,37 @@ def get_docker_output_path(local_path: Path) -> str:
     """
     relative_path = local_path.relative_to(OUTPUT_DIR)
     return str(Path(DOCKER_OUTPUT_DIR) / relative_path)
+
+
+def get_mounted_output_dir() -> Optional[Path]:
+    """
+    获取容器挂载的输出目录路径（宿主机路径）.
+    
+    Returns:
+        挂载的输出目录路径，如果无法确定则返回 None
+    """
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["docker", "inspect", CONTAINER_NAME, "--format", "{{range .Mounts}}{{if eq .Destination \"/app/output\"}}{{.Source}}{{end}}{{end}}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return Path(result.stdout.strip())
+    except Exception:
+        pass
+    
+    # 默认尝试常见的挂载路径
+    default_paths = [
+        Path("/Users/leo/code/SAHI_inf/pv_pile/output"),
+        Path("/Users/leo/code/pv_pile/output"),
+    ]
+    
+    for path in default_paths:
+        if path.exists():
+            return path
+    
+    return None
 

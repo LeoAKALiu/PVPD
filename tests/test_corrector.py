@@ -145,17 +145,15 @@ class TestFillGrid:
         )
     
     def test_fill_grid_without_points(self) -> None:
-        """测试没有现有点时的网格填充."""
+        """测试没有现有点时的网格填充（应该返回空数组）."""
         points = np.array([]).reshape(0, 2)
         image_shape = (500, 500)
         
         filled_points = fill_grid(points, image_shape, grid_spacing=100.0)
         
-        assert len(filled_points) > 0
-        assert all(
-            (0 <= p[0] < image_shape[1]) and (0 <= p[1] < image_shape[0])
-            for p in filled_points
-        )
+        # 没有现有点时，不应该填充（因为没有参考点）
+        assert len(filled_points) == 0
+        assert filled_points.shape == (0, 2)
     
     def test_fill_grid_small_image(self) -> None:
         """测试小图像的网格填充."""

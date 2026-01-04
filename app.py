@@ -207,7 +207,7 @@ def main() -> None:
         
         # 显示原图
         st.header("📷 原始图像")
-        st.image(uploaded_file)
+        st.image(uploaded_file, use_column_width=True)
         
         # 推理按钮
         col1, col2, col3 = st.columns([1, 1, 2])
