@@ -137,8 +137,8 @@ def fill_grid(
         return points
     
     # 计算现有点的边界框（带扩展）
-    # 扩展范围：在边界框周围扩展 2 倍 grid_spacing
-    margin = grid_spacing * 2
+    # 扩展范围：在边界框周围扩展 1 倍 grid_spacing（更保守）
+    margin = grid_spacing
     x_min = max(0, float(np.min(points[:, 0])) - margin)
     x_max = min(width, float(np.max(points[:, 0])) + margin)
     y_min = max(0, float(np.min(points[:, 1])) - margin)
@@ -162,10 +162,10 @@ def fill_grid(
     distances = cdist(grid_points, points)
     min_distances = np.min(distances, axis=1)
     
-    # 只保留距离现有点足够近的点（在 grid_spacing 范围内，可能是缺失的检测）
+    # 只保留距离现有点在合理范围内的点（可能是缺失的检测）
     # 同时排除距离太近的点（避免重复）
-    min_threshold = grid_spacing * 0.3  # 最小距离，避免重复
-    max_threshold = grid_spacing * 1.2  # 最大距离，只在附近填充
+    min_threshold = grid_spacing * 0.5  # 最小距离，避免重复（更保守）
+    max_threshold = grid_spacing * 0.9  # 最大距离，只在很近的范围内填充（更保守）
     
     new_points_mask = (min_distances >= min_threshold) & (min_distances <= max_threshold)
     
