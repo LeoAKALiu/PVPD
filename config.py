@@ -53,7 +53,8 @@ STREAMLIT_PAGE_TITLE: str = "PV Pile Integration System"
 STREAMLIT_PAGE_ICON: str = "🔋"
 
 # ==================== 性能配置 ====================
-DOCKER_TIMEOUT_SECONDS: int = 600  # Docker 命令超时时间（10分钟）
+DOCKER_TIMEOUT_SECONDS: int = 600  # Docker 命令超时时间（10分钟，基础值）
+DOCKER_TIMEOUT_MAX_SECONDS: int = 1800  # Docker 命令最大超时时间（30分钟，用于超大图像）
 MAX_WORKERS: int = 4  # 最大并发工作线程数
 
 # ==================== 日志配置 ====================

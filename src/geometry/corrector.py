@@ -507,8 +507,10 @@ def apply_chain_based_correction(
         chain_indices.update(chain)
     
     # 步骤 2: 过滤掉不在任何链中的点（可能是误检）
-    filtered_points = points[list(chain_indices)]
-    filtered_detections = [detections[i] for i in chain_indices]
+    # 使用排序后的索引确保 filtered_points 和 filtered_detections 的顺序一致
+    sorted_indices = sorted(chain_indices)
+    filtered_points = points[sorted_indices]
+    filtered_detections = [detections[i] for i in sorted_indices]
     removed_count = original_count - len(filtered_points)
     
     logger.info(f"过滤完成：保留 {len(filtered_points)} 个点，移除 {removed_count} 个孤立点")

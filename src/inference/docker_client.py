@@ -163,6 +163,42 @@ def run_docker_inference(
     logger.info(f"开始推理: {image_path.name}")
     logger.debug(f"Docker 命令: {' '.join(cmd)}")
     
+    # 计算动态超时时间（根据图像大小和切片参数）
+    try:
+        import cv2
+        img = cv2.imread(str(image_path))
+        if img is not None:
+            img_height, img_width = img.shape[:2]
+            # 计算切片数量（考虑重叠）
+            effective_slice_height = slice_height * (1 - overlap_ratio)
+            effective_slice_width = slice_width * (1 - overlap_ratio)
+            num_slices_h = max(1, int((img_height - slice_height) / effective_slice_height) + 1)
+            num_slices_w = max(1, int((img_width - slice_width) / effective_slice_width) + 1)
+            total_slices = num_slices_h * num_slices_w
+            
+            # 估算推理时间：每个切片约 0.1-0.5 秒（取决于硬件）
+            # 保守估计：每个切片 0.3 秒，加上 50% 的缓冲
+            estimated_time = total_slices * 0.3 * 1.5
+            
+            # 超时时间：估算时间的 2 倍，但不超过最大超时时间
+            dynamic_timeout = min(
+                max(int(estimated_time * 2), config.DOCKER_TIMEOUT_SECONDS),
+                config.DOCKER_TIMEOUT_MAX_SECONDS
+            )
+            
+            logger.info(
+                f"图像尺寸: {img_width}x{img_height}, "
+                f"切片数: {total_slices}, "
+                f"估算时间: {estimated_time:.1f}秒, "
+                f"超时设置: {dynamic_timeout}秒"
+            )
+        else:
+            dynamic_timeout = config.DOCKER_TIMEOUT_SECONDS
+            logger.warning(f"无法读取图像尺寸，使用默认超时: {dynamic_timeout}秒")
+    except Exception as e:
+        dynamic_timeout = config.DOCKER_TIMEOUT_SECONDS
+        logger.warning(f"计算动态超时失败: {e}，使用默认超时: {dynamic_timeout}秒")
+    
     start_time = time.time()
     
     # 尝试使用 Docker API，如果失败则使用命令行
@@ -181,7 +217,7 @@ def run_docker_inference(
             exec_result = container.exec_run(
                 cmd,
                 workdir="/app",
-                timeout=config.DOCKER_TIMEOUT_SECONDS,
+                timeout=dynamic_timeout,
             )
             
             exit_code = exec_result.exit_code
@@ -199,7 +235,7 @@ def run_docker_inference(
                 docker_cmd,
                 capture_output=True,
                 text=True,
-                timeout=config.DOCKER_TIMEOUT_SECONDS,
+                timeout=dynamic_timeout,
             )
             
             exit_code = result.returncode
