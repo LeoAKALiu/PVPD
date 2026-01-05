@@ -9,7 +9,6 @@ import config
 from src.geometry.corrector import apply_geometric_correction
 from src.inference.docker_client import check_container_status, run_docker_inference
 from src.inference.result_parser import get_detection_stats, parse_sahi_results
-from src.visualization.confidence_colors import get_confidence_emoji
 from src.visualization.image_stitcher import create_visualization, image_to_pil
 
 # 配置日志
@@ -27,61 +26,135 @@ st.set_page_config(
 # 确保必要的目录存在
 config.ensure_directories()
 
-# 自定义 CSS 样式（治愈系配色）
+# 自定义 CSS 样式（MagicUI 专业设计风格）
 st.markdown(
     """
     <style>
-    /* 主色调 - 治愈系绿色 */
+    /* MagicUI 专业设计风格 */
     .main {
-        background-color: #F8FFF8;
+        background-color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    
+    /* 标题样式 */
+    h1 {
+        color: #0f172a;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+    }
+    
+    h2, h3 {
+        color: #1e293b;
+        font-weight: 600;
+        letter-spacing: -0.015em;
     }
     
     /* 卡片样式 */
     .stMetric {
-        background-color: #FFFFFF;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background-color: #ffffff;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        transition: all 0.2s;
+    }
+    
+    .stMetric:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border-color: #cbd5e1;
     }
     
     /* 按钮样式 */
     .stButton > button {
-        background-color: #58CC02;
+        background-color: #0f172a;
         color: white;
-        border-radius: 8px;
+        border-radius: 0.5rem;
         border: none;
-        font-weight: 600;
-        transition: all 0.3s;
+        font-weight: 500;
+        padding: 0.625rem 1.25rem;
+        transition: all 0.2s;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     
     .stButton > button:hover {
-        background-color: #4CAF00;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(88, 204, 2, 0.3);
+        background-color: #1e293b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .stButton > button:active {
+        transform: translateY(0);
     }
     
     /* 成功消息样式 */
     .stSuccess {
-        background-color: #E8F5E9;
-        border-left: 4px solid #58CC02;
+        background-color: #f0fdf4;
+        border: 1px solid #86efac;
+        color: #166534;
         padding: 1rem;
-        border-radius: 5px;
+        border-radius: 0.5rem;
     }
     
     /* 错误消息样式 */
     .stError {
-        background-color: #FFEBEE;
-        border-left: 4px solid #F44336;
+        background-color: #fef2f2;
+        border: 1px solid #fca5a5;
+        color: #991b1b;
         padding: 1rem;
-        border-radius: 5px;
+        border-radius: 0.5rem;
     }
     
     /* 信息框样式 */
     .stInfo {
-        background-color: #E3F2FD;
-        border-left: 4px solid #2196F3;
+        background-color: #eff6ff;
+        border: 1px solid #93c5fd;
+        color: #1e40af;
         padding: 1rem;
-        border-radius: 5px;
+        border-radius: 0.5rem;
+    }
+    
+    /* 侧边栏样式 */
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    /* 确保侧边栏内容区域背景正确 */
+    [data-testid="stSidebar"] > div {
+        background-color: #f8fafc;
+    }
+    
+    /* 确保主内容区域背景正确 */
+    .main .block-container {
+        background-color: #ffffff;
+    }
+    
+    /* 输入框样式 */
+    .stTextInput > div > div > input {
+        border-radius: 0.5rem;
+        border: 1px solid #cbd5e1;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #0f172a;
+        box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+    }
+    
+    /* 滑块样式 - 移除可能导致黑色块的样式，使用 Streamlit 默认样式 */
+    
+    /* 文件上传样式 */
+    .stFileUploader > div {
+        border: 2px dashed #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        background-color: #f8fafc;
+        transition: all 0.2s;
+    }
+    
+    .stFileUploader > div:hover {
+        border-color: #0f172a;
+        background-color: #f1f5f9;
     }
     </style>
     """,
@@ -91,12 +164,12 @@ st.markdown(
 
 def main() -> None:
     """主应用函数."""
-    st.title("🔋 PV Pile Integration System")
+    st.title("PV Pile Integration System")
     st.markdown("光伏板桩基检测集成系统 - 整合 PV Pile 和 SolarGeoFix")
     
     # 侧边栏 - 参数配置
     with st.sidebar:
-        st.header("⚙️ 配置参数")
+        st.header("配置参数")
         
         slice_height = st.number_input(
             "切片高度",
@@ -135,19 +208,29 @@ def main() -> None:
         )
         
         st.divider()
-        st.subheader("🔧 几何校正参数")
+        st.subheader("几何校正参数")
         
-        use_ransac = st.checkbox(
-            "使用 RANSAC 回归",
-            value=True,
-            help="使用 RANSAC 回归修正检测点位置"
+        use_chain_search = st.checkbox(
+            "使用链式搜索算法（推荐）",
+            value=False,
+            help="使用链式搜索算法识别桩列，适合复杂场景（多列、弯曲）"
         )
         
-        use_grid_fill = st.checkbox(
-            "使用网格填充",
-            value=True,
-            help="使用网格填充算法生成缺失的检测点"
-        )
+        if not use_chain_search:
+            use_ransac = st.checkbox(
+                "使用 RANSAC 回归",
+                value=True,
+                help="使用 RANSAC 回归修正检测点位置"
+            )
+            
+            use_grid_fill = st.checkbox(
+                "使用网格填充",
+                value=True,
+                help="使用网格填充算法生成缺失的检测点"
+            )
+        else:
+            use_ransac = False
+            use_grid_fill = False
         
         if use_ransac:
             ransac_degree = st.slider(
@@ -183,7 +266,7 @@ def main() -> None:
             grid_spacing = 50.0
     
     # 主内容区
-    st.header("📤 图像上传")
+    st.header("图像上传")
     
     uploaded_file = st.file_uploader(
         "选择无人机正摄航拍图像",
@@ -192,6 +275,31 @@ def main() -> None:
     )
     
     if uploaded_file is not None:
+        # 检查是否是新图像（与 session state 中保存的图像不同）
+        current_file_name = uploaded_file.name
+        if "current_file_name" not in st.session_state:
+            st.session_state["current_file_name"] = None
+        
+        # 如果图像发生变化，清除所有相关的 session state
+        if st.session_state["current_file_name"] != current_file_name:
+            # 清除旧的推理结果
+            keys_to_clear = [
+                "detections",
+                "stats",
+                "corrected_detections",
+                "corrected_stats",
+                "correction_stats",
+                "result",
+                "input_path",
+                "image_shape",
+            ]
+            for key in keys_to_clear:
+                if key in st.session_state:
+                    del st.session_state[key]
+            
+            # 更新当前文件名
+            st.session_state["current_file_name"] = current_file_name
+        
         # 显示上传的图像信息
         file_details = {
             "文件名": uploaded_file.name,
@@ -206,15 +314,15 @@ def main() -> None:
             f.write(uploaded_file.getbuffer())
         
         # 显示原图
-        st.header("📷 原始图像")
+        st.header("原始图像")
         st.image(uploaded_file, use_column_width=True)
         
         # 推理按钮
         col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
-            run_inference = st.button("🚀 运行推理", type="primary", use_container_width=True)
+            run_inference = st.button("运行推理", type="primary", use_container_width=True)
         with col2:
-            clear_cache = st.button("🗑️ 清除缓存", use_container_width=True)
+            clear_cache = st.button("清除缓存", use_container_width=True)
         
         if clear_cache:
             st.cache_data.clear()
@@ -224,7 +332,7 @@ def main() -> None:
         container_status = check_container_status()
         if not container_status:
             st.error(
-                f"⚠️ Docker 容器 '{config.CONTAINER_NAME}' 未运行。"
+                f"Docker 容器 '{config.CONTAINER_NAME}' 未运行。"
                 "请先启动容器。"
             )
         
@@ -259,11 +367,12 @@ def main() -> None:
                         corrected_detections, correction_stats = apply_geometric_correction(
                             detections=detections,
                             image_shape=image_shape,
-                            use_ransac=use_ransac,
-                            use_grid_fill=use_grid_fill,
-                            ransac_degree=ransac_degree,
-                            ransac_threshold=ransac_threshold,
-                            grid_spacing=grid_spacing,
+                            use_chain_search=use_chain_search,
+                            use_ransac=use_ransac if not use_chain_search else False,
+                            use_grid_fill=use_grid_fill if not use_chain_search else False,
+                            ransac_degree=ransac_degree if not use_chain_search else 2,
+                            ransac_threshold=ransac_threshold if not use_chain_search else 10.0,
+                            grid_spacing=grid_spacing if not use_chain_search else 50.0,
                         )
                         
                         corrected_stats = get_detection_stats(corrected_detections)
@@ -277,44 +386,41 @@ def main() -> None:
                         st.session_state["result"] = result
                         st.session_state["input_path"] = input_path
                         st.session_state["image_shape"] = image_shape
+                        st.session_state["current_file_name"] = current_file_name  # 确保保存当前文件名
                         
                         st.success(
-                            f"✅ 推理完成！检测到 {stats['total']} 个目标，"
+                            f"推理完成！检测到 {stats['total']} 个目标，"
                             f"几何校正后 {corrected_stats['total']} 个目标"
                         )
                         
                     except Exception as e:
                         logger.exception("推理失败")
-                        st.error(f"❌ 推理失败: {str(e)}")
+                        st.error(f"推理失败: {str(e)}")
         
-        # 显示推理结果
-        if "detections" in st.session_state and st.session_state["detections"]:
+        # 显示推理结果（只显示当前图像的推理结果）
+        if (
+            "detections" in st.session_state
+            and st.session_state["detections"]
+            and "current_file_name" in st.session_state
+            and st.session_state["current_file_name"] == current_file_name
+        ):
             detections = st.session_state["detections"]
             stats = st.session_state["stats"]
             input_path = st.session_state["input_path"]
             
             # 推理结果可视化
-            st.header("🔍 推理结果")
+            st.header("推理结果")
             
             # 统计信息
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("总检测数", stats["total"])
             with col2:
-                st.metric(
-                    f"{get_confidence_emoji(0.8)} 高置信度",
-                    stats["high_confidence"],
-                )
+                st.metric("高置信度", stats["high_confidence"])
             with col3:
-                st.metric(
-                    f"{get_confidence_emoji(0.5)} 中置信度",
-                    stats["medium_confidence"],
-                )
+                st.metric("中置信度", stats["medium_confidence"])
             with col4:
-                st.metric(
-                    f"{get_confidence_emoji(0.3)} 低置信度",
-                    stats["low_confidence"],
-                )
+                st.metric("低置信度", stats["low_confidence"])
             
             st.metric("平均置信度", f"{stats['avg_confidence']:.3f}")
             
@@ -324,8 +430,8 @@ def main() -> None:
                     image_path=input_path,
                     detections=detections,
                     thickness=2,
-                    show_label=True,
-                    show_confidence=True,
+                    show_label=False,
+                    show_confidence=False,
                 )
                 
                 # 转换为 PIL 图像用于 Streamlit 显示
@@ -344,7 +450,7 @@ def main() -> None:
                     buf = BytesIO()
                     pil_image.save(buf, format="PNG")
                     st.download_button(
-                        label="📥 下载推理结果图像",
+                        label="下载推理结果图像",
                         data=buf.getvalue(),
                         file_name=f"{Path(input_path).stem}_inference.png",
                         mime="image/png",
@@ -360,7 +466,7 @@ def main() -> None:
                     }
                     json_str = json.dumps(json_data, indent=2, ensure_ascii=False)
                     st.download_button(
-                        label="📄 导出 JSON 结果",
+                        label="导出 JSON 结果",
                         data=json_str.encode("utf-8"),
                         file_name=f"{Path(input_path).stem}_inference.json",
                         mime="application/json",
@@ -371,16 +477,20 @@ def main() -> None:
                 logger.exception("可视化失败")
                 st.error(f"可视化失败: {str(e)}")
         
-        # 几何校正结果
-        st.header("✅ 几何校正结果")
-        if "corrected_detections" in st.session_state:
+        # 几何校正结果（只显示当前图像的校正结果）
+        st.header("几何校正结果")
+        if (
+            "corrected_detections" in st.session_state
+            and "current_file_name" in st.session_state
+            and st.session_state["current_file_name"] == current_file_name
+        ):
             corrected_detections = st.session_state["corrected_detections"]
             corrected_stats = st.session_state["corrected_stats"]
             correction_stats = st.session_state["correction_stats"]
             input_path = st.session_state["input_path"]
             
             # 校正统计信息
-            st.subheader("📊 校正统计")
+            st.subheader("校正统计")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("原始检测数", correction_stats["original_count"])
@@ -397,25 +507,16 @@ def main() -> None:
                 st.metric("新增检测", correction_stats["added_count"])
             
             # 校正后统计信息
-            st.subheader("📈 校正后统计")
+            st.subheader("校正后统计")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("总检测数", corrected_stats["total"])
             with col2:
-                st.metric(
-                    f"{get_confidence_emoji(0.8)} 高置信度",
-                    corrected_stats["high_confidence"],
-                )
+                st.metric("高置信度", corrected_stats["high_confidence"])
             with col3:
-                st.metric(
-                    f"{get_confidence_emoji(0.5)} 中置信度",
-                    corrected_stats["medium_confidence"],
-                )
+                st.metric("中置信度", corrected_stats["medium_confidence"])
             with col4:
-                st.metric(
-                    f"{get_confidence_emoji(0.3)} 低置信度",
-                    corrected_stats["low_confidence"],
-                )
+                st.metric("低置信度", corrected_stats["low_confidence"])
             
             st.metric("平均置信度", f"{corrected_stats['avg_confidence']:.3f}")
             
@@ -425,15 +526,15 @@ def main() -> None:
                     image_path=input_path,
                     detections=corrected_detections,
                     thickness=2,
-                    show_label=True,
-                    show_confidence=True,
+                    show_label=False,
+                    show_confidence=False,
                 )
                 
                 # 转换为 PIL 图像用于 Streamlit 显示
                 corrected_pil_image = image_to_pil(corrected_vis_image)
                 
                 # 显示校正后的可视化结果
-                st.subheader("🖼️ 校正后可视化")
+                st.subheader("校正后可视化")
                 st.image(
                     corrected_pil_image,
                     use_column_width=True,
@@ -450,7 +551,7 @@ def main() -> None:
                     buf = BytesIO()
                     corrected_pil_image.save(buf, format="PNG")
                     st.download_button(
-                        label="📥 下载校正结果图像",
+                        label="下载校正结果图像",
                         data=buf.getvalue(),
                         file_name=f"{Path(input_path).stem}_corrected.png",
                         mime="image/png",
@@ -468,7 +569,7 @@ def main() -> None:
                     }
                     json_str = json.dumps(json_data, indent=2, ensure_ascii=False)
                     st.download_button(
-                        label="📄 导出校正 JSON 结果",
+                        label="导出校正 JSON 结果",
                         data=json_str.encode("utf-8"),
                         file_name=f"{Path(input_path).stem}_corrected.json",
                         mime="application/json",
@@ -478,13 +579,18 @@ def main() -> None:
             except Exception as e:
                 logger.exception("校正结果可视化失败")
                 st.error(f"校正结果可视化失败: {str(e)}")
-        elif "detections" in st.session_state:
+        elif (
+            "detections" in st.session_state
+            and "current_file_name" in st.session_state
+            and st.session_state["current_file_name"] == current_file_name
+        ):
             st.info("几何校正已完成，但结果未保存到 session state")
         else:
-            st.info("请先运行推理以查看几何校正结果")
+            # 不显示任何信息，因为可能是旧图像的结果
+            pass
     
     else:
-        st.info("👆 请上传一张图像开始处理")
+        st.info("请上传一张图像开始处理")
 
 
 if __name__ == "__main__":
