@@ -95,3 +95,5 @@ def test_detection_with_explicit_center() -> None:
     assert detection.x_center == 70.0
     assert detection.y_center == 55.0
 
+
+

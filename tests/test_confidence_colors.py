@@ -105,3 +105,5 @@ class TestGetConfidenceEmoji:
         """测试低置信度表情."""
         assert get_confidence_emoji(0.3) == "🔴"
 
+
+

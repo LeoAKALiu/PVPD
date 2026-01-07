@@ -62,3 +62,5 @@ class Detection:
             "confidence": self.confidence,
         }
 
+
+

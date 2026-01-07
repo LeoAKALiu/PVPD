@@ -201,3 +201,5 @@ class TestGetDetectionStats:
         assert stats["categories"][0] == 3
         assert stats["categories"][1] == 1
 
+
+

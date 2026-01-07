@@ -72,3 +72,5 @@ python3 -c "import config; print(f'容器内模型路径: {config.MODEL_WEIGHTS}
 
 *最后更新: 2025-01-27*
 
+
+

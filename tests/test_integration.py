@@ -180,3 +180,5 @@ class TestErrorHandling:
         
         assert vis_image is not None
 
+
+
